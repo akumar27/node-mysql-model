@@ -225,6 +225,51 @@ movie.find('first', {where: "id=12"}, function(err, row) {
 });
 ```	
 
+> setPrimaryKey
+
+*Method to inform node-mysql-model methods (including read, save and remove) that their is a PRIMARY_KEY in this table*
+
+Usage:
+
+```javascript
+movie.setPrimaryKey(true,"MY_PK_COLUMN_NAME");
+```	
+Parameters:
+
+- *hasPrimaryKey* **boolean**: True or False, this table has a primary key
+- *column_name* **string**: Name of the column that is the primary key
+
+Example:
+
+```javascript
+movie.getPrimaryKey( function(hasPrimaryKey, primaryKey) {
+	movie.setPrimaryKey(hasPrimaryKey, primaryKey);
+});
+```	
+
+> getPrimaryKey
+
+*Method to retrieve PRIMARY_KEY in this table, can be used in conjuction with setPrimaryKey*
+
+Usage:
+
+```javascript
+movie.getPrimaryKey(callback);
+```	
+Parameters:
+
+- *function* **callback**: Returns whether table has a primary key and if so the column name of the primary key
+
+Note: Will not work with tables that have composite keys.
+
+Example:
+
+```javascript
+movie.getPrimaryKey( function(hasPrimaryKey, primaryKey) {
+	movie.setPrimaryKey(hasPrimaryKey, primaryKey);
+});
+```	
+
 **'find' methods**
 
 > 'all'
