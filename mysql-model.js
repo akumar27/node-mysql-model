@@ -8,6 +8,26 @@ var createConnection  = function (options) {
 
 	// Main model
 	var SQLModel = Backbone.Model.extend({
+		//Get the primarykey Information
+		getPrimaryKey: function(callback){
+				//Primary Key Setup
+				if(this.tableName) var tableName = this.tableName;
+				else var tableName = this.attributes.tableName;
+				var q = "SHOW KEYS FROM "+tableName+" WHERE Key_name = 'PRIMARY'";
+				connection.query(q, function(err, result) {
+					if(result.length>0){
+						callback(true,result[0]['Column_name']);
+					}else{
+						callback(false,"");
+					}
+				});
+					
+		},
+		// Function for setting primary key override values (used in "save" method)
+		setPrimaryKey: function(hasPrimaryKey, primaryKeyValue){
+			this.hasPrimaryKey=hasPrimaryKey;
+			this.primaryKey = primaryKeyValue;
+		},
 		// Function instead of set, removes functions passed back in results by node-mysql
 		setSQL: function(sql) {
 			for (var key in sql) {
@@ -34,8 +54,10 @@ var createConnection  = function (options) {
 			} else if (typeof(id) == "function") {
 				callback=id;
 				id=this.attributes.id;
-			} 
-			var q = "SELECT * FROM "+tableName+" WHERE id="+id;
+			}
+			if(this.hasPrimaryKey) var field=this.primaryKey;
+			else var field="id"; 
+			var q = "SELECT * FROM "+tableName+" WHERE "+field+"="+id;
 			connection.query(q, root, function(err, result, fields) {
 				root.setSQL(result[0]);
 				if(callback){
@@ -138,10 +160,14 @@ var createConnection  = function (options) {
 					id = this.get('id');
 					delete this.attributes.id;
 				}
+				if(this.has('tableName')){
+					delete this.attributes.tableName;
+				}
 				var q = "UPDATE "+tableName+" SET "+ connection.escape(this.attributes)+" WHERE "+where;
 				if(id) {
 					this.set('id', id);
 				}
+				this.attributes.tableName = tableName;
 				var check = "SELECT * FROM "+tableName+" WHERE "+where;
 				connection.query(check, function(err, result, fields) {
 					if(result[0]){
@@ -159,10 +185,14 @@ var createConnection  = function (options) {
 			} else {
 				if(this.has('id')) {
 					var id = this.get('id');
+					delete this.attributes.tableName;
 					delete this.attributes.id;
-					var q = "UPDATE "+tableName+" SET "+ connection.escape(this.attributes)+" WHERE id="+connection.escape(id);
+					if(this.hasPrimaryKey) var field=this.primaryKey;
+					else var field="id";
+					var q = "UPDATE "+tableName+" SET "+ connection.escape(this.attributes)+" WHERE "+field+"="+connection.escape(id);
 					this.set('id', id);
-					var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(id);
+					this.set('tableName', tableName);
+					var check = "SELECT * FROM "+tableName+" WHERE "+field+"="+connection.escape(id);
 					connection.query(check, function(err, result, fields) {
 						if(result[0]){
 							connection.query(q, function(err, result) {
@@ -211,8 +241,10 @@ var createConnection  = function (options) {
 				});					
 			} else {
 				if(this.has('id')) {
-					var q = "DELETE FROM "+tableName+" WHERE id="+connection.escape(this.attributes.id);
-					var check = "SELECT * FROM "+tableName+" WHERE id="+connection.escape(this.attributes.id);
+					if(this.hasPrimaryKey) var field=this.primaryKey;
+					else var field="id";
+					var q = "DELETE FROM "+tableName+" WHERE "+field+"="+connection.escape(this.attributes.id);
+					var check = "SELECT * FROM "+tableName+" WHERE "+field+"="+connection.escape(this.attributes.id);
 					this.clear();
 					connection.query(check, function(err, result, fields) {
 						if(result[0]){
@@ -235,6 +267,7 @@ var createConnection  = function (options) {
 			}	
 		},
 	});
+	
 	return SQLModel;
 }
 exports.createConnection = createConnection;
